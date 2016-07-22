@@ -5,3 +5,4 @@ out/
 __pycache__/
 *.mobi
 *.opf
+*.html
