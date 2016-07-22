@@ -1,0 +1,7 @@
+dev/
+out/
+*.swp
+*.py[cod]
+__pycache__/
+*.mobi
+*.opf
