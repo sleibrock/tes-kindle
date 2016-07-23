@@ -41,17 +41,19 @@ def craft_fname(uri):
     """
     return "{}.html".format(uri.split("/").pop())
 
-def clean_s
+def isnt_empty(tag):
+    if tag.text.strip() == "\xa0" or tag.text.replace("\xa0", " ").strip() == "":
+        return False
+    return True
 
 for uri, bs in zip(search_hrefs, search_items):
     with open(craft_fname(uri), "w") as f:
         f.write("<html>")
         f.write("<head>")
         f.write("<title>{}</title>".format("x d"))
-        f.write("<meta author='author name'>")
         f.write("<meta charset='utf-8'>")
-        f.write("</head><body>")
-        for para in gather_text(bs):
+        f.write("</head><body>\n")
+        for para in filter(isnt_empty, gather_text(bs)):
             f.write("{}\n".format(str(para)))
         f.write("</body></html>")
 
