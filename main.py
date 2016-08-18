@@ -1,13 +1,25 @@
 #!/usr/bin/env python
 #-*- coding: utf-8 -*-
 
+"""
+The program to handle converting Imperial Library to Kindle
+
+1) Download an index of all books for each Game category
+2) For each book in an index, convert the text to a small HTML format
+3) Run kindlegen by feeding it an XML file describing the book's metadata
+4) Move the book into a directory corresponding to it's game
+
+* Books have the filename "the-url-the-book-came-from-v1.mobi"
+* Books will have titles in the format "[game] Book Title v1, The"
+"""
+
 from bs4 import BeautifulSoup as BS   # parser
 from subprocess import call as s_call # sub-system call
 from requests import get as re_get    # fetch data from URI
 from os import mkdir, listdir         # list and make directories
 from os.path import join, exists      # check path exists, join path strings
 from shutil import move as fmove      # file moving
-from string import printable as printable_chrs # printable characters
+from string import printable          # printable characters
 from sys import argv                  # obvious
 
 # Output settings
@@ -80,7 +92,7 @@ def get_bs(url):
     Applies a ton of filtering/replacing so we don't get bad characters
     """
     text = re_get(craft_url(url)).text
-    text = "".join([c for c in text if c in printable_chrs])
+    text = "".join([c for c in text if c in printable])
     text = text.replace("\n", " ").replace("\xa0", " ")
     return BS(text, 'html.parser')
 
@@ -101,8 +113,15 @@ def get_title(bs, game):
     """
     Return the title of the given book BS
     Luckily it seems to be the only H1 tag in the BS
+    Format it so "The" appears at the end of the book
+    Versions of the book can be before "The", what do I care?
+    Target output: "[dag] Real Barenziah v1, The"
     """
-    return "[{0}] {1}".format(game.capitalize(), bs.h1.text)
+    title = bs.h1.text
+    if title.lower().strip().startswith("the"):
+        splits = title.split(" ")
+        title = "{1}, {0}".format(splits.pop(0), " ".join(splits))
+    return "[{0}] {1}".format(game[:3].lower(), bs.h1.text)
 
 def get_author(bs):
     """
@@ -114,7 +133,7 @@ def get_author(bs):
     if not len(auth):
         return ""
     auth = auth[0].text.replace("Author:", "")
-    auth = "".join([c for c in auth if c in printable_chrs]).strip()
+    auth = "".join([c for c in auth if c in printable]).strip()
     return auth
 
 def gather_text(bs):
@@ -166,11 +185,14 @@ def main(*args, **kwargs):
     book_hrefs = list() # list to collect all HREFs gathered
 
     # first check whether we have an output directory
+    print("Checking main output directory...")
     if not exists(OUTDIR):
         print("Creating book output directory")
         mkdir(OUTDIR)
-        print("Creating sub-directories")
-        for game in SOURCE_URLS.keys():
+
+    print("Checking sub-directories...")
+    for game in SOURCE_URLS.keys():
+        if not exists(join(OUTDIR, game)):
             mkdir(join(OUTDIR, game))
         print("Done creating directories")
 
