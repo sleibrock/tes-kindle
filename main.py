@@ -11,8 +11,10 @@ The program to handle converting Imperial Library to Kindle
 
 * Books have the filename "the-url-the-book-came-from-v1.mobi"
 * Books will have titles in the format "[game] Book Title v1, The"
+* TES Online has a TON of books which will clutter your Kindle completely
 """
 
+# TODO: add PIL to the requirements and work on a PIL image generator
 from bs4 import BeautifulSoup as BS   # parser
 from subprocess import call as s_call # sub-system call
 from requests import get as re_get    # fetch data from URI
@@ -21,11 +23,13 @@ from os.path import join, exists      # check path exists, join path strings
 from shutil import move as fmove      # file moving
 from string import printable          # printable characters
 from sys import argv                  # obvious
+from time import sleep                # be nice to the Imperial Library
 
 # Output settings
 OUTDIR      = "out"
 OUTNAME     = "{1}.mobi"
 ROOT_URL    = "http://www.imperial-library.info"
+SLEEP_TIME  = 2
 
 # Really crappy check to see if we have a local bin or not 
 KGEN_BIN    = "kindlegen" if "kindlegen" not in listdir(".") else "./kindlegen"
@@ -40,11 +44,12 @@ SOURCE_URLS = {
     "oblivion"    : "/books/oblivion/by-title",
     "skyrim"      : "/books/skyrim/by-title",
     "online"      : "/books/online/by-title",
-    }
+}
 
 # We have to re-write an OPF file with each book's details 
 # Kindlegen uses the OPF XML file as a way of writing info about the book
 # No point in creating a complex ETree to express this when I'm changing two things
+# TODO: add a PIL-created image to the cover to make it feel authentic
 OPF_BLOB    = """
 <?xml version="1.0" encoding="iso-8859-1"?>
 <package unique-identifier="uid" xmlns:opf="http://www.idpf.org/2007/opf" xmlns:asd="http://www.idpf.org/asdfaf">
@@ -156,12 +161,13 @@ def to_book(game, url):
     raw_bs = get_bs(url)
     vol_ls = raw_bs.find_all("div", class_="book-navigation")
 
-    if vol_ls: # this page contains listing for multiple books
+    # Default settings if the page grabbed is only 1 book long
+    # If there is more tha one volume on the page, find them all
+    s_href = [url]
+    s_bses = [raw_bs]
+    if vol_ls:
         s_href = [x.a["href"] for x in vol_ls[0].find_all("li")]
         s_bses = [get_bs(href) for href in s_href]
-    else:      # this page is the only book
-        s_href = [url]
-        s_bses = [raw_bs]
 
     # Write HTML, OPF, and run the compiler
     for url, bs in zip(s_href, s_bses):
@@ -200,7 +206,8 @@ def main(*args, **kwargs):
     for game, source_url in SOURCE_URLS.items():
         print("Downloading index of {}...".format(source_url))
         index = get_bs(source_url) # get the BS of the current index
-        book_hrefs.extend([(game, x['href']) for x in index.find_all("div", class_="view-content")[0].find_all("a")])
+        divls = index.find_all("div", class_="view-content")[0].find_all("a")
+        book_hrefs.extend([(game, x['href']) for x in divls])
     print("Total count: {}".format(len(book_hrefs)))
 
     # Process each URL and it's game to the to_book() function
@@ -208,6 +215,7 @@ def main(*args, **kwargs):
     for game, href in book_hrefs:
         print("Processing {}...".format(href))
         to_book(game, href)
+        sleep(SLEEP_TIME)
         count += 1
         print("{0} books processed".format(count))
 
