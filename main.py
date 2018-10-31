@@ -90,6 +90,7 @@ def craft_url(url):
     """
     return "{}{}".format(ROOT_URL, url)
 
+
 def get_bs(url):
     """
     Return a parser of the given URL fragment
@@ -101,11 +102,13 @@ def get_bs(url):
     text = text.replace("\n", " ").replace("\xa0", " ")
     return BS(text, 'html.parser')
 
+
 def craft_fname(section, url):
     """
     Craft a filename for moving the MOBI file
     """
     return OUTNAME.format(section, url.split("/").pop())
+
 
 def run_kindlegen():
     """
@@ -113,6 +116,7 @@ def run_kindlegen():
     The blob then has to be moved by the program to a folder
     """
     return s_call([KGEN_BIN, "-o", "output.mobi", "book.opf"])
+
 
 def get_title(bs, game):
     """
@@ -128,6 +132,7 @@ def get_title(bs, game):
         title = "{1}, {0}".format(splits.pop(0), " ".join(splits))
     return "[{0}] {1}".format(game[:3].lower(), bs.h1.text)
 
+
 def get_author(bs):
     """
     Find the author name, which exists in a strange div next to some strange 
@@ -141,6 +146,7 @@ def get_author(bs):
     auth = "".join([c for c in auth if c in printable]).strip()
     return auth
 
+
 def gather_text(bs):
     """
     Collect all paragraphs under the node-content div
@@ -149,6 +155,7 @@ def gather_text(bs):
     """
     node_root = bs.find_all("div", class_="node-content")
     return [str(p).replace("\xa0", " ") for p in node_root[1].find_all("p")]
+
 
 def to_book(game, url):
     """
@@ -183,6 +190,7 @@ def to_book(game, url):
         except Exception as e:
             print("Error occurred: {}".format(str(e)))
     return True 
+
 
 def main(*args, **kwargs):
     """
